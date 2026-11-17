@@ -59,7 +59,7 @@ def get_ranking(tour: Annotated[Literal["ATP","WTA"], Query()] = "ATP", limit: A
 
 @app.get("/players")
 def get_players():
-    with get_connection as conn:
+    with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
             SELECT id, name, tour, ranking 
@@ -79,7 +79,7 @@ def get_players():
 
 @app.get("/players/{id}")
 def get_players(id:str):
-    with get_connection as conn:
+    with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
             SELECT id, name, tour, ranking 
@@ -95,7 +95,7 @@ def get_players(id:str):
 def insert_players(limit: Annotated[int, Query(ge=1,le=100)] = 100, tour: Annotated[Literal["ATP","WTA"],Query()] = "ATP"):
     data = fetch_api()  
     count = 0
-    with get_connection as conn:
+    with get_connection() as conn:
             with conn.cursor() as cur:
                 for rank in data["rankings"]:
                     if rank["name"] == tour:
@@ -116,7 +116,7 @@ def insert_teams(name:Teams):
     new_team = name.model_dump()
     if len(name.team) > 50:
         raise HTTPException(status_code=400,detail="Team name is too long, must be under 50 characters")
-    with get_connection as conn:
+    with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
             INSERT INTO teams(team)
@@ -125,3 +125,11 @@ def insert_teams(name:Teams):
             """, (name.team,))
             row = cur.fetchone()
     return {"id": row[0], "team": row[1]}
+
+@app.get("/teams")
+def get_class():
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, team from teams")
+            rows = cur.fetchall()
+    return [{"id": row[0], "team": row[1]} for row in rows]
