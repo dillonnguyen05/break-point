@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from typing import Annotated, Literal
 import requests
 from dotenv import load_dotenv
@@ -66,6 +66,24 @@ def get_players():
             "ranking": player[3]
         })  
     return players
+
+@app.get("/players/{id}")
+def get_players(id:str):
+    with psycopg.connect(dbname="tennis_fantasy",
+    user="postgres",
+    password=db_pw,
+    host="localhost",
+    port=5432) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+            SELECT id, name, tour, ranking 
+            FROM players
+            WHERE id = %s
+            """, (id,))
+            row = cur.fetchone()
+            if row == None:
+                raise HTTPException(status_code=404, detail="Item not found")
+    return row
 
 @app.post("/players")
 def insert_players(limit: Annotated[int, Query(ge=1,le=100)] = 100, tour: Annotated[Literal["ATP","WTA"],Query()] = "ATP"):
