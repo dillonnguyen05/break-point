@@ -13,6 +13,16 @@ app = FastAPI()
 sports_api = os.getenv("SPORTSAPI")
 db_pw = os.getenv("DB_PASSWORD")
 
+def get_connection():
+    return psycopg.connect(
+        dbname="tennis_fantasy",
+        user="postgres",
+        password=db_pw,
+        host="localhost",
+        port=5432,
+        connect_timeout=10,
+    )
+
 def fetch_api():
     url = "https://api.sportradar.com/tennis/trial/v3/en/rankings.json"
     headers = {
@@ -49,11 +59,7 @@ def get_ranking(tour: Annotated[Literal["ATP","WTA"], Query()] = "ATP", limit: A
 
 @app.get("/players")
 def get_players():
-    with psycopg.connect(dbname="tennis_fantasy",
-    user="postgres",
-    password=db_pw,
-    host="localhost",
-    port=5432) as conn:
+    with get_connection as conn:
         with conn.cursor() as cur:
             cur.execute("""
             SELECT id, name, tour, ranking 
@@ -73,11 +79,7 @@ def get_players():
 
 @app.get("/players/{id}")
 def get_players(id:str):
-    with psycopg.connect(dbname="tennis_fantasy",
-    user="postgres",
-    password=db_pw,
-    host="localhost",
-    port=5432) as conn:
+    with get_connection as conn:
         with conn.cursor() as cur:
             cur.execute("""
             SELECT id, name, tour, ranking 
@@ -93,11 +95,7 @@ def get_players(id:str):
 def insert_players(limit: Annotated[int, Query(ge=1,le=100)] = 100, tour: Annotated[Literal["ATP","WTA"],Query()] = "ATP"):
     data = fetch_api()  
     count = 0
-    with psycopg.connect(dbname="tennis_fantasy",
-        user="postgres",
-        password=db_pw,
-        host="localhost",
-        port=5432) as conn:
+    with get_connection as conn:
             with conn.cursor() as cur:
                 for rank in data["rankings"]:
                     if rank["name"] == tour:
@@ -118,11 +116,7 @@ def insert_teams(name:Teams):
     new_team = name.model_dump()
     if len(name.team) > 50:
         raise HTTPException(status_code=400,detail="Team name is too long, must be under 50 characters")
-    with psycopg.connect(dbname="tennis_fantasy",
-        user="postgres",
-        password=db_pw,
-        host="localhost",
-        port=5432) as conn:
+    with get_connection as conn:
         with conn.cursor() as cur:
             cur.execute("""
             INSERT INTO teams(team)
