@@ -4,6 +4,7 @@ import requests
 from dotenv import load_dotenv
 import os
 import psycopg
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -23,6 +24,9 @@ def fetch_api():
     response.raise_for_status()
     data = response.json()
     return data
+
+class Teams(BaseModel):
+    team: str
 
 @app.get("/")
 async def root():
@@ -108,3 +112,22 @@ def insert_players(limit: Annotated[int, Query(ge=1,le=100)] = 100, tour: Annota
                                     tour = EXCLUDED.tour
                                 """,(player["competitor"]["id"], player["competitor"]["name"], rank["name"], player["rank"]))
     return {"saved": count}
+
+@app.post("/teams", status_code=201)
+def insert_teams(name:Teams):
+    new_team = name.model_dump()
+    if len(name.team) > 50:
+        raise HTTPException(status_code=400,detail="Team name is too long, must be under 50 characters")
+    with psycopg.connect(dbname="tennis_fantasy",
+        user="postgres",
+        password=db_pw,
+        host="localhost",
+        port=5432) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+            INSERT INTO teams(team)
+            VALUES(%s)
+            RETURNING id, team
+            """, (name.team,))
+            row = cur.fetchone()
+    return {"id": row[0], "team": row[1]}
