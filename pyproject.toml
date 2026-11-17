@@ -1,0 +1,10 @@
+[project]
+name = "tennis-proejct"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastapi[standard]>=0.163.1",
+    "psycopg[binary]>=3.3.9",
+    "requests>=2.34.2",
+]
